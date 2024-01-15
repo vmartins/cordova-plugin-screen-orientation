@@ -28,6 +28,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 
 import android.app.Activity;
+import android.provider.Settings;
 import android.content.pm.ActivityInfo;
 import android.util.Log;
 
@@ -74,20 +75,40 @@ public class CDVOrientation extends CordovaPlugin {
         
         Activity activity = cordova.getActivity();
         
+        if (Settings.System.canWrite(activity)) {
+            Settings.System.putInt(activity.getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, 0);
+        }
+        
         if (orientation.equals(ANY)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         } else if (orientation.equals(LANDSCAPE_PRIMARY)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+
+            if (Settings.System.canWrite(activity)) {
+                Settings.System.putInt(activity.getContentResolver(), Settings.System.USER_ROTATION, 0);
+            }
         } else if (orientation.equals(PORTRAIT_PRIMARY)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+            if (Settings.System.canWrite(activity)) {
+                Settings.System.putInt(activity.getContentResolver(), Settings.System.USER_ROTATION, 3);
+            }
         } else if (orientation.equals(LANDSCAPE)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE);
         } else if (orientation.equals(PORTRAIT)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR_PORTRAIT);
         } else if (orientation.equals(LANDSCAPE_SECONDARY)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_LANDSCAPE);
+
+            if (Settings.System.canWrite(activity)) {
+                Settings.System.putInt(activity.getContentResolver(), Settings.System.USER_ROTATION, 2);
+            }
         } else if (orientation.equals(PORTRAIT_SECONDARY)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_REVERSE_PORTRAIT);
+
+            if (Settings.System.canWrite(activity)) {
+                Settings.System.putInt(activity.getContentResolver(), Settings.System.USER_ROTATION, 1);
+            }
         }
         
         callbackContext.success();
