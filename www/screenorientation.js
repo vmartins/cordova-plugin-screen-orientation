@@ -58,7 +58,7 @@ screenOrientation.unlock = function () {
     screenOrientation.setOrientation('any');
 };
 
-setOrientationProperties();
+updateOrientationProperties();
 
 function resolveOrientation (orientation, resolve, reject) {
     if (!Object.prototype.hasOwnProperty.call(OrientationLockType, orientation)) {
@@ -91,10 +91,11 @@ Object.defineProperty(screenOrientation, 'onchange', {
 
 var evtTarget = new XMLHttpRequest(); // document.createElement('div');
 var orientationchange = function () {
-    setOrientationProperties();
-    var event = document.createEvent('Events');
-    event.initEvent('change', false, false);
-    evtTarget.dispatchEvent(event);
+    updateOrientationProperties(function () {
+        var event = document.createEvent('Events');
+        event.initEvent('change', false, false);
+        evtTarget.dispatchEvent(event);
+    });
 };
 
 screenOrientation.addEventListener = function (a, b, c) {
@@ -105,7 +106,29 @@ screenOrientation.removeEventListener = function (a, b, c) {
     return evtTarget.removeEventListener(a, b, c);
 };
 
-function setOrientationProperties () {
+function updateOrientationProperties (callback) {
+    if (window.cordova && cordova.platformId === 'android') {
+        cordova.exec(
+            function (result) {
+                screenOrientation.type = result.type;
+                screenOrientation.angle = result.angle;
+                if (callback) callback();
+            },
+            function () {
+                // Falha ao consultar nativamente (ex.: fork antigo sem o método) — usa o fallback
+                setOrientationPropertiesFromWindowOrientation();
+                if (callback) callback();
+            },
+            'CDVOrientation', 'getCurrentOrientation', []
+        );
+    } else {
+        setOrientationPropertiesFromWindowOrientation();
+        if (callback) callback();
+    }
+}
+
+// Fallback
+function setOrientationPropertiesFromWindowOrientation () {
     switch (window.orientation) {
     case 0:
         screenOrientation.type = 'portrait-primary';
@@ -125,6 +148,7 @@ function setOrientationProperties () {
     }
     screenOrientation.angle = window.orientation || 0;
 }
+
 window.addEventListener('orientationchange', orientationchange, true);
 
 module.exports = screenOrientation;

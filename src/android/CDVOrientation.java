@@ -26,20 +26,23 @@ import org.apache.cordova.CordovaPlugin;
 
 import org.json.JSONArray;
 import org.json.JSONException;
+import org.json.JSONObject;
 
 import android.app.Activity;
 import android.provider.Settings;
 import android.content.pm.ActivityInfo;
 import android.util.Log;
+import android.view.Display;
+import android.view.Surface;
 
 public class CDVOrientation extends CordovaPlugin {
-    
-    private static final String TAG = "YoikScreenOrientation"; 
-    
+
+    private static final String TAG = "YoikScreenOrientation";
+
     /**
      * Screen Orientation Constants
      */
-    
+
     private static final String ANY = "any";
     private static final String PORTRAIT_PRIMARY = "portrait-primary";
     private static final String PORTRAIT_SECONDARY = "portrait-secondary";
@@ -47,38 +50,39 @@ public class CDVOrientation extends CordovaPlugin {
     private static final String LANDSCAPE_SECONDARY = "landscape-secondary";
     private static final String PORTRAIT = "portrait";
     private static final String LANDSCAPE = "landscape";
-    
+
     @Override
     public boolean execute(String action, JSONArray args, CallbackContext callbackContext) {
-        
+
         Log.d(TAG, "execute action: " + action);
-        
+
         // Route the Action
         if (action.equals("screenOrientation")) {
             return routeScreenOrientation(args, callbackContext);
         }
-        
+
+        if (action.equals("getCurrentOrientation")) {
+            return getCurrentOrientation(callbackContext);
+        }
+
         // Action not found
         callbackContext.error("action not recognised");
         return false;
     }
-    
+
     private boolean routeScreenOrientation(JSONArray args, CallbackContext callbackContext) {
-        
+
         String action = args.optString(0);
-        
-        
-        
         String orientation = args.optString(1);
-        
+
         Log.d(TAG, "Requested ScreenOrientation: " + orientation);
-        
+
         Activity activity = cordova.getActivity();
-        
+
         if (Settings.System.canWrite(activity)) {
             Settings.System.putInt(activity.getContentResolver(), Settings.System.ACCELEROMETER_ROTATION, 0);
         }
-        
+
         if (orientation.equals(ANY)) {
             activity.setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED);
         } else if (orientation.equals(LANDSCAPE_PRIMARY)) {
@@ -110,10 +114,52 @@ public class CDVOrientation extends CordovaPlugin {
                 Settings.System.putInt(activity.getContentResolver(), Settings.System.USER_ROTATION, 1);
             }
         }
-        
+
         callbackContext.success();
         return true;
-        
-        
+    }
+
+    private boolean getCurrentOrientation(CallbackContext callbackContext) {
+        Activity activity = cordova.getActivity();
+
+        @SuppressWarnings("deprecation")
+        Display display = activity.getWindowManager().getDefaultDisplay();
+        int rotation = display.getRotation();
+
+        String type;
+        int angle;
+        switch (rotation) {
+            case Surface.ROTATION_90:
+                type = PORTRAIT_SECONDARY;
+                angle = 90;
+                break;
+            case Surface.ROTATION_180:
+                type = LANDSCAPE_SECONDARY;
+                angle = 180;
+                break;
+            case Surface.ROTATION_270:
+                type = PORTRAIT_PRIMARY;
+                angle = 270;
+                break;
+            case Surface.ROTATION_0:
+            default:
+                type = LANDSCAPE_PRIMARY;
+                angle = 0;
+                break;
+        }
+
+        Log.d(TAG, "getCurrentOrientation: rotation=" + rotation
+                + " -> type=" + type + " angle=" + angle);
+
+        try {
+            JSONObject result = new JSONObject();
+            result.put("type", type);
+            result.put("angle", angle);
+            callbackContext.success(result);
+        } catch (JSONException e) {
+            callbackContext.error("Falha ao montar resultado de getCurrentOrientation: " + e.getMessage());
+        }
+
+        return true;
     }
 }
